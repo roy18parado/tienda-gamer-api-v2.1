@@ -1,8 +1,24 @@
 {
   "name": "tienda-gamer-frontend",
   "version": "1.0.0",
-  "description": "Frontend para Tienda Gamer",
+  "description": "Frontend para Tienda Gamer API",
+  "type": "module",
   "scripts": {
-    "dev": "npx serve . -p 3000"
+    "dev": "npx serve . -p 3000",
+    "build": "echo 'No build step needed for static site'",
+    "start": "npx serve . -p 3000"
+  },
+  "keywords": [
+    "frontend",
+    "tienda-gamer",
+    "api"
+  ],
+  "author": "Tu nombre",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.0.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
