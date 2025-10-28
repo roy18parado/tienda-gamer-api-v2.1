@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Tienda Gamer API</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f0f2f5; }
+    .card img { height: 220px; object-fit: cover; }
+    .admin-panel { display: none; } /* Oculto por defecto */
+    .super-panel { display: none; } /* Oculto por defecto */
+    .card-title { font-weight: 600; }
+    .card-text { font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="#"><i class="bi bi-joystick"></i> TIENDAMANIAaaa GAMER</a>
+    <div>
+      <button id="btnLogin" class="btn btn-outline-light me-2">Iniciar sesión</button>
+      <button id="btnLogout" class="btn btn-light d-none">Cerrar sesión <i class="bi bi-box-arrow-right"></i></button>
+    </div>
+  </div>
+</nav>
+
+<div class="container my-4">
+  <div class="row">
+    <aside class="col-12 col-md-3">
+      <div class="card">
+        <div class="card-header fw-bold">Categorías</div>
+        <div id="categoriesNav" class="list-group list-group-flush"></div>
+      </div>
+    </aside>
+
+    <main class="col-12 col-md-9">
+      <h4 id="productsTitle">Todos los productos</h4>
+      <div class="row g-4" id="productsGrid"></div>
+    </main>
+  </div>
+
+  <div class="admin-panel my-5">
+    <hr>
+    <h2 class="text-center mb-4">Panel de Administración</h2>
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header fw-bold"><i class="bi bi-box-seam"></i> Gestión de Productos</div>
+                <div class="card-body">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productModal">
+                        <i class="bi bi-plus-circle"></i> Nuevo Producto
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header fw-bold"><i class="bi bi-tags"></i> Gestión de Categorías</div>
+                <div class="card-body">
+                    <form id="formCategoria">
+                        <div class="input-group">
+                            <input id="catNombre" class="form-control" placeholder="Nueva categoría" required>
+                            <button class="btn btn-success" type="submit">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+  
+  <div class="super-panel my-5">
+      <hr>
+      <h2 class="text-center mb-4">Panel de Superusuario</h2>
+      <div class="card">
+          <div class="card-header fw-bold"><i class="bi bi-people"></i> Gestión de Usuarios</div>
+          <div class="card-body">
+              <form id="formUsuario" class="row g-3 align-items-end">
+                  <div class="col-md-4">
+                      <label class="form-label">Username</label>
+                      <input id="userUsername" class="form-control" required>
+                  </div>
+                  <div class="col-md-4">
+                      <label class="form-label">Password</label>
+                      <input id="userPassword" type="password" class="form-control" required>
+                  </div>
+                  <div class="col-md-2">
+                      <label class="form-label">Rol</label>
+                      <select id="userRole" class="form-select">
+                          <option value="user">Usuario</option>
+                          <option value="admin">Admin</option>
+                          <option value="super">Super</option>
+                      </select>
+                  </div>
+                  <div class="col-md-2">
+                      <button class="btn btn-info w-100" type="submit">Crear Usuario</button>
+                  </div>
+              </form>
+          </div>
+          <ul id="userList" class="list-group list-group-flush"></ul>
+      </div>
+  </div>
+
+</div> <div class="modal fade" id="loginModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Iniciar Sesión</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formLogin">
+          <input id="loginUser" class="form-control mb-2" placeholder="Usuario (ej: admin)" required>
+          <input id="loginPass" type="password" class="form-control mb-2" placeholder="Contraseña (ej: admin123)" required>
+          <button class="btn btn-primary w-100">Ingresar</button>
+        </form>
+        <p id="loginMsg" class="text-danger mt-2 text-center"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="formProducto">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productModalTitle">Nuevo Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="prodId">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input id="prodNombre" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Precio (S/)</label>
+                            <input id="prodPrecio" type="number" step="0.01" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Stock</label>
+                            <input id="prodStock" type="number" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select id="prodCategoria" class="form-select"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea id="prodDescripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detalleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detalleTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-7">
+                        <h6>Imágenes</h6>
+                        <div id="detalleImagenes" class="row g-2"></div>
+                        <form id="formImagen" class="input-group mt-3 admin-panel">
+                            <input type="hidden" id="imgProductoId">
+                            <input id="imgUrl" type="url" class="form-control" placeholder="URL de nueva imagen" required>
+                            <button class="btn btn-success">Añadir</button>
+                        </form>
+                    </div>
+                    <div class="col-md-5">
+                        <h6>Detalles</h6>
+                        <ul id="detalleInfo" class="list-group"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// =================================================================
+// =================== CONFIGURACIÓN Y HELPERS =====================
+// =================================================================
+const API_BASE = "http://localhost:3000";
+let allCategories = [];
+let allProducts = [];
+let loginModal, productModal, detalleModal;
+
+// Helper para llamadas a la API
+async function apiFetch(path, options = {}) {
+    const token = localStorage.getItem("token");
+    if (token) {
+        options.headers = { ...options.headers, "Authorization": "Bearer " + token };
+    }
+    try {
+        const res = await fetch(API_BASE + path, options);
+        const data = await res.json();
+        if (!res.ok) throw data;
+        return data;
+    } catch (err) {
+        console.error(`API Fetch Error (${path}):`, err.error || err.message);
+        throw err;
+    }
+}
+
+// =================================================================
+// =================== INICIALIZACIÓN DE LA APP ====================
+// =================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    // Instancias de Modales de Bootstrap
+    loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+    productModal = new bootstrap.Modal(document.getElementById('productModal'));
+    detalleModal = new bootstrap.Modal(document.getElementById('detalleModal'));
+
+    setupEventListeners();
+    checkLoginStatus();
+    loadInitialData();
+});
+
+function setupEventListeners() {
+    // Botones Login/Logout
+    btnLogin.onclick = () => loginModal.show();
+    btnLogout.onclick = logout;
+
+    // Formularios
+    formLogin.onsubmit = handleLogin;
+    formCategoria.onsubmit = handleCreateCategory;
+    formProducto.onsubmit = handleCreateOrUpdateProduct;
+    formImagen.onsubmit = handleCreateImage;
+    formUsuario.onsubmit = handleCreateUser;
+}
+
+async function loadInitialData() {
+    await loadCategories();
+    await loadProducts();
+}
+
+// =================================================================
+// ==================== LÓGICA DE AUTENTICACIÓN ====================
+// =================================================================
+async function handleLogin(e) {
+    e.preventDefault();
+    try {
+        const res = await apiFetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: loginUser.value, password: loginPass.value })
+        });
+        localStorage.setItem("token", res.token);
+        localStorage.setItem("role", res.role); // <-- ¡CLAVE! Guardar el rol
+        loginMsg.textContent = "";
+        loginModal.hide();
+        checkLoginStatus();
+        loadProducts(); // Recargar productos para mostrar botones de admin
+    } catch (err) {
+        loginMsg.textContent = "❌ " + (err.error || "Error de conexión");
+    }
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role"); // <-- ¡CLAVE! Limpiar el rol
+    checkLoginStatus();
+    loadProducts(); // Recargar productos para ocultar botones de admin
+}
+
+function checkLoginStatus() {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Lógica de visibilidad de paneles
+    const isAdmin = role === 'admin' || role === 'super';
+    const isSuper = role === 'super';
+    
+    document.querySelectorAll('.admin-panel').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+    document.querySelectorAll('.super-panel').forEach(el => el.style.display = isSuper ? 'block' : 'none');
+
+    // Botones Login/Logout
+    btnLogout.classList.toggle("d-none", !token);
+    btnLogin.classList.toggle("d-none", !!token);
+
+    // Cargar datos de superusuario si corresponde
+    if (isSuper) {
+        loadUsers();
+    } else {
+        document.getElementById('userList').innerHTML = ''; // Limpiar lista si no es super
+    }
+}
+
+// =================================================================
+// ===================== LÓGICA DE CATEGORÍAS ======================
+// =================================================================
+async function loadCategories() {
+    try {
+        allCategories = await apiFetch("/categorias");
+        renderCategories(allCategories);
+        updateCategorySelect(allCategories);
+    } catch (err) { /* Manejo de error ya en apiFetch */ }
+}
+
+function renderCategories(categories) {
+    const nav = document.getElementById("categoriesNav");
+    nav.innerHTML = '<a href="#" class="list-group-item list-group-item-action active" data-id="all">Todos</a>';
+    categories.forEach(c => {
+        nav.innerHTML += `<a href="#" class="list-group-item list-group-item-action" data-id="${c.id}">${c.nombre}</a>`;
+    });
+    // Añadir event listeners a los nuevos links
+    nav.querySelectorAll('a').forEach(a => {
+        a.onclick = (e) => {
+            e.preventDefault();
+            nav.querySelector('.active').classList.remove('active');
+            a.classList.add('active');
+            const categoryId = a.getAttribute('data-id');
+            const productsToShow = (categoryId === 'all')
+                ? allProducts
+                : allProducts.filter(p => p.categoria_id == categoryId);
+            renderProducts(productsToShow);
+        };
+    });
+}
+
+async function handleCreateCategory(e) {
+    e.preventDefault();
+    const nombre = catNombre.value;
+    if (!nombre) return;
+    try {
+        await apiFetch("/categorias", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nombre })
+        });
+        catNombre.value = "";
+        loadCategories(); // Recargar
+    } catch (err) { alert("Error al crear categoría"); }
+}
+
+// =================================================================
+// ====================== LÓGICA DE PRODUCTOS ======================
+// =================================================================
+async function loadProducts() {
+    try {
+        const prods = await apiFetch("/productos");
+        allProducts = prods.map(p => ({ ...p, firstImageUrl: p.firstImageUrl || 'https://via.placeholder.com/300' }));
+        renderProducts(allProducts);
+    } catch (err) { /* Manejo de error */ }
+}
+
+function renderProducts(products) {
+    const grid = document.getElementById("productsGrid");
+    grid.innerHTML = "";
+    if (products.length === 0) {
+        grid.innerHTML = "<p>No hay productos en esta categoría.</p>";
+        return;
+    }
+    const role = localStorage.getItem("role");
+    const isAdmin = role === 'admin' || role === 'super';
+
+    products.forEach(p => {
+        const adminButtons = isAdmin ? `
+            <button class="btn btn-sm btn-outline-secondary me-2" onclick="openEditProductModal(${p.id})"><i class="bi bi-pencil"></i> Editar</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${p.id})"><i class="bi bi-trash"></i></button>
+        ` : '';
+        grid.innerHTML += `
+        <div class="col-md-6 col-lg-4">
+          <div class="card h-100 shadow-sm">
+            <img src="${p.firstImageUrl}" class="card-img-top">
+            <div class="card-body">
+              <h5 class="card-title">${p.nombre}</h5>
+              <p class="card-text text-muted">${p.categoria || "Sin categoría"}</p>
+              <h4>S/ ${Number(p.precio).toFixed(2)}</h4>
+            </div>
+            <div class="card-footer bg-white border-top-0 pb-3">
+              <button class="btn btn-primary" onclick="openDetalleModal(${p.id})">Ver detalle</button>
+              <div class="float-end">${adminButtons}</div>
+            </div>
+          </div>
+        </div>`;
+    });
+}
+
+function openEditProductModal(id) {
+    const product = allProducts.find(p => p.id === id);
+    if (!product) return;
+    
+    document.getElementById('productModalTitle').textContent = 'Editar Producto';
+    prodId.value = product.id;
+    prodNombre.value = product.nombre;
+    prodPrecio.value = product.precio;
+    prodStock.value = product.stock;
+    prodCategoria.value = product.categoria_id;
+    prodDescripcion.value = product.descripcion;
+    
+    productModal.show();
+}
+
+async function handleCreateOrUpdateProduct(e) {
+    e.preventDefault();
+    const productId = prodId.value;
+    const isEditing = !!productId;
+    
+    const productData = {
+        nombre: prodNombre.value,
+        precio: prodPrecio.value,
+        stock: prodStock.value,
+        categoria_id: prodCategoria.value,
+        descripcion: prodDescripcion.value
+    };
+
+    try {
+        await apiFetch(isEditing ? `/productos/${productId}` : '/productos', {
+            method: isEditing ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+        });
+        productModal.hide();
+        loadProducts();
+    } catch (err) {
+        alert('Error al guardar el producto');
+    }
+}
+
+async function deleteProduct(id) {
+    if (!confirm("¿Estás seguro de que quieres eliminar este producto?")) return;
+    try {
+        await apiFetch(`/productos/${id}`, { method: 'DELETE' });
+        loadProducts();
+    } catch (err) { alert("Error al eliminar el producto"); }
+}
+
+// =================================================================
+// ================= LÓGICA DE DETALLES E IMÁGENES =================
+// =================================================================
+async function openDetalleModal(id) {
+    const p = allProducts.find(x => x.id === id);
+    detalleTitle.textContent = p.nombre;
+    imgProductoId.value = id; // Para el form de nueva imagen
+
+    detalleInfo.innerHTML = `
+        <li class="list-group-item"><b>Precio:</b> S/ ${Number(p.precio).toFixed(2)}</li>
+        <li class="list-group-item"><b>Stock:</b> ${p.stock} unidades</li>
+        <li class="list-group-item"><b>Categoría:</b> ${p.categoria || "N/A"}</li>
+        <li class="list-group-item"><b>Descripción:</b> ${p.descripcion || "No disponible"}</li>
+    `;
+    
+    detalleModal.show();
+    loadProductImages(id);
+}
+
+async function loadProductImages(productId) {
+    const gal = document.getElementById("detalleImagenes");
+    gal.innerHTML = "<p>Cargando imágenes...</p>";
+    const images = await apiFetch(`/imagenes/${productId}`);
+    gal.innerHTML = "";
+    if (images.length === 0) {
+        gal.innerHTML = "<p>Este producto no tiene imágenes.</p>";
+        return;
+    }
+    images.forEach(i => {
+        gal.innerHTML += `
+        <div class="col-6 mb-2">
+          <img src="${i.url}" class="img-fluid rounded">
+        </div>`;
+    });
+}
+
+async function handleCreateImage(e) {
+    e.preventDefault();
+    const producto_id = imgProductoId.value;
+    const url = imgUrl.value;
+    try {
+        await apiFetch('/imagenes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, producto_id })
+        });
+        imgUrl.value = '';
+        loadProductImages(producto_id); // Recargar imágenes del modal
+        loadProducts(); // Recargar productos para actualizar la imagen principal
+    } catch (err) { alert('Error al añadir imagen'); }
+}
+
+// =================================================================
+// ====================== LÓGICA DE USUARIOS =======================
+// =================================================================
+async function loadUsers() {
+    try {
+        const users = await apiFetch("/usuarios");
+        renderUsers(users);
+    } catch(err) { /* Manejo de error */ }
+}
+
+function renderUsers(users) {
+    const list = document.getElementById("userList");
+    list.innerHTML = "";
+    users.forEach(u => {
+        list.innerHTML += `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-person-circle"></i> <strong>${u.username}</strong>
+            </div>
+            <span class="badge bg-secondary">${u.role}</span>
+        </li>`;
+    });
+}
+
+async function handleCreateUser(e) {
+    e.preventDefault();
+    const userData = {
+        username: userUsername.value,
+        password: userPassword.value,
+        role: userRole.value
+    };
+    try {
+        await apiFetch('/usuarios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        });
+        formUsuario.reset();
+        loadUsers();
+    } catch (err) {
+        alert("Error al crear usuario: " + (err.error || "Verifica los datos"));
+    }
+}
+
+// =================================================================
+// ===================== HELPERS ADICIONALES =======================
+// =================================================================
+function updateCategorySelect(categories) {
+    prodCategoria.innerHTML = categories.map(c => `<option value="${c.id}">${c.nombre}</option>`).join("");
+}
+
+</script>
+</body>
+</html>
