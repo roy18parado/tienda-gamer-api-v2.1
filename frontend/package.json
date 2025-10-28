@@ -1,0 +1,8 @@
+{
+  "name": "tienda-gamer-frontend",
+  "version": "1.0.0",
+  "description": "Frontend para Tienda Gamer",
+  "scripts": {
+    "dev": "npx serve . -p 3000"
+  }
+}
