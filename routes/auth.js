@@ -1,37 +1,56 @@
+// routes/auth.js
+const express = require('express');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const db = require('../db');
+const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'CLAVE_SECRETA';
 
-function parseTokenFromHeader(req) {
-  const auth = req.headers['authorization'] || '';
-  return auth.startsWith('Bearer ') ? auth.slice(7) : null;
-}
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
 
-function authRequired(req, res, next) {
-  const token = parseTokenFromHeader(req);
-  if (!token) return res.status(401).json({ error: 'Token requerido' });
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: 'Token inválido' });
+  if (!username || !password) {
+    console.log("🚫 Faltan campos");
+    return res.status(400).json({ error: 'username y password requeridos' });
   }
-}
 
-function requireRole(...allowedRoles) {
-  return (req, res, next) => {
-    const token = parseTokenFromHeader(req);
-    if (!token) return res.status(401).json({ error: 'Token requerido' });
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded;
-      if (!allowedRoles.includes(decoded.role)) {
-        return res.status(403).json({ error: 'Permiso denegado' });
-      }
-      next();
-    } catch (err) {
-      return res.status(403).json({ error: 'Token inválido' });
+  try {
+    console.log("🧠 Intentando login de:", username);
+    
+    // 1️⃣ Buscar usuario en la BD
+    const result = await db.query('SELECT * FROM usuarios WHERE username = $1', [username]);
+    console.log("📦 Resultado query:", result.rows);
+
+    if (result.rows.length === 0) {
+      console.log("❌ Usuario no encontrado");
+      return res.status(401).json({ error: 'Usuario no encontrado' });
     }
-  };
-}
 
-module.exports = { authRequired, requireRole };
+    const user = result.rows[0];
+
+    // 2️⃣ Validar contraseña
+    const passwordIsValid = await bcrypt.compare(password, user.password);
+    console.log("🔑 Contraseña válida:", passwordIsValid);
+
+    if (!passwordIsValid) {
+      console.log("❌ Contraseña incorrecta");
+      return res.status(401).json({ error: 'Contraseña incorrecta' });
+    }
+
+    // 3️⃣ Generar token
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+
+    console.log("✅ Login exitoso, token generado");
+    res.json({ token, role: user.role });
+
+  } catch (err) {
+    console.error("💥 Error completo en /login:", err);
+    res.status(500).json({ error: 'Error interno del servidor al intentar iniciar sesión.', detalle: err.message });
+  }
+});
+
+module.exports = router;
