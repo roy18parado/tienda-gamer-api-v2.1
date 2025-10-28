@@ -11,18 +11,20 @@ app.set('trust proxy', 1);
 // --- CONFIGURACIÓN CORS ACTUALIZADA ---
 const allowedOrigins = [
     'http://45.232.149.130',
-    '45.232.149.130', // IP directa
+    '45.232.149.130',
     'http://45.232.149.146', 
     '45.232.149.146',
     'http://168.194.102.140',
     '168.194.102.140',
     'https://tienda-gamer-api-v2.onrender.com',
-    'null' // Para archivos locales
+    'https://tienda-gamer-frontend.vercel.app',
+    'https://tienda-gamer-frontend-git-main-tu-usuario.vercel.app',
+    'https://*.vercel.app',
+    'null'
 ];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // Permitir requests sin origen, null, o en la lista permitida
         if (!origin || origin === 'null' || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
@@ -46,9 +48,12 @@ const whitelist = [
     '168.194.102.140',
     '34.82.242.193',
     '10.214.0.0/16',
-    '10.0.0.0/8',       // Rango más amplio para Render
+    '10.0.0.0/8',
     '127.0.0.1',
-    '::1'
+    '::1',
+    '76.76.21.0/24',
+    '172.64.0.0/13',
+    '172.67.0.0/13'
 ];
 
 // --- MIDDLEWARE DE IP MEJORADO ---
@@ -62,7 +67,6 @@ const ipWhitelistMiddleware = (req, res, next) => {
             ? forwardedFor.split(',')[0].trim() 
             : (realIp || req.ip || req.connection.remoteAddress);
 
-        // Limpiar formato IPv6
         const ipClean = clientIp.replace(/::ffff:/g, '');
         const ipToCheck = ipClean === '::1' ? '127.0.0.1' : ipClean;
 
@@ -100,7 +104,7 @@ app.get('/', ipWhitelistMiddleware, (req, res) => {
             imagenes: '/imagenes',
             usuarios: '/usuarios'
         },
-        note: 'Esta es una API REST. Usa tu frontend desde una IP autorizada.'
+        note: 'Esta es una API REST. Frontend disponible en Vercel.'
     });
 });
 
@@ -161,7 +165,6 @@ const swaggerOptions = {
 
 try {
     const swaggerSpec = swaggerJSDoc(swaggerOptions);
-    // Swagger público (sin filtro IP para facilitar acceso)
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
     console.log("📚 Documentación Swagger configurada en /api-docs");
 } catch (error) {
@@ -197,6 +200,6 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor API corriendo en puerto ${PORT}`);
     console.log(`📋 IPs permitidas: ${whitelist.join(', ')}`);
+    console.log(`🌐 Orígenes CORS permitidos: ${allowedOrigins.join(', ')}`);
     console.log(`🔐 Modo: Solo API REST`);
-    console.log(`🌐 Frontend externo desde IPs autorizadas`);
 });
