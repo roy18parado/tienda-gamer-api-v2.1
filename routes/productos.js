@@ -3,22 +3,30 @@ const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const router = express.Router();
 
-// GET /productos (público)
+// GET /productos (público) - CORREGIDO
 router.get('/', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT 
-        p.id, p.nombre, p.descripcion, p.precio, p.stock, p.categoria_id, 
-        c.nombre AS categoria,
-        (SELECT url FROM imagenes_productos ip WHERE ip.producto_id = p.id ORDER BY ip.id LIMIT 1) AS "firstImageUrl"
-      FROM productos p
-      LEFT JOIN categorias c ON p.categoria_id = c.id
-      ORDER BY p.id DESC
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    try {
+        // Query que obtiene la imagen MÁS RECIENTE y la nombra correctamente
+        const result = await db.query(`
+            SELECT
+                p.id, p.nombre, p.descripcion, p.precio, p.stock, p.categoria_id,
+                c.nombre AS categoria,
+                -- Subconsulta para obtener la URL de la imagen más reciente
+                (SELECT url
+                 FROM imagenes_productos ip
+                 WHERE ip.producto_id = p.id
+                 ORDER BY ip.creado_en DESC -- Ordenar por fecha de creación DESCENDENTE
+                 LIMIT 1                     -- Tomar solo la más reciente
+                ) AS firstimageurl           -- Alias en MINÚSCULAS y sin comillas
+            FROM productos p
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+            ORDER BY p.creado_en DESC;     -- Ordenar productos por fecha de creación
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error al obtener productos:', err); // Loguear error en el servidor
+        res.status(500).json({ error: 'Error interno al obtener productos' });
+    }
 });
 
 // POST /productos
