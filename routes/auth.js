@@ -1,56 +1,79 @@
-// routes/auth.js
-const express = require('express');
-const bcrypt = require('bcryptjs');
+// middleware/auth.js
 const jwt = require('jsonwebtoken');
-const db = require('../db');
-const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'CLAVE_SECRETA';
 
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+// Lista de IPs permitidas para el público
+const whitelist = [
+  '45.232.149.130',
+  '127.0.0.1',       // IPv4 localhost
+  '::1',             // IPv6 localhost
+  '45.232.149.146',
+  '168.194.102.140',
+  '34.82.242.193',
+  '10.214.0.0/16'
+];
 
-  if (!username || !password) {
-    console.log("🚫 Faltan campos");
-    return res.status(400).json({ error: 'username y password requeridos' });
+// Función para verificar si una IP está permitida
+function checkIP(req) {
+  const clientIP = req.ip || req.connection.remoteAddress;
+  return whitelist.some(ip => {
+    if (ip.includes('/')) {
+      // CIDR simple
+      const [subnet, bits] = ip.split('/');
+      const mask = ~(2 ** (32 - parseInt(bits)) - 1);
+      const subnetInt = ipToInt(subnet) & mask;
+      return (ipToInt(clientIP) & mask) === subnetInt;
+    } else {
+      return ip === clientIP;
+    }
+  });
+}
+
+function ipToInt(ip) {
+  return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0);
+}
+
+// Parsear token
+function parseTokenFromHeader(req) {
+  const auth = req.headers['authorization'] || '';
+  return auth.startsWith('Bearer ') ? auth.slice(7) : null;
+}
+
+// Middleware principal
+function authRequired(req, res, next) {
+  const token = parseTokenFromHeader(req);
+
+  // Si no hay token, solo permitir si IP está en whitelist
+  if (!token) {
+    if (checkIP(req)) return next(); 
+    return res.status(401).json({ error: 'Token requerido' });
   }
 
+  // Validar token
   try {
-    console.log("🧠 Intentando login de:", username);
-    
-    // 1️⃣ Buscar usuario en la BD
-    const result = await db.query('SELECT * FROM usuarios WHERE username = $1', [username]);
-    console.log("📦 Resultado query:", result.rows);
-
-    if (result.rows.length === 0) {
-      console.log("❌ Usuario no encontrado");
-      return res.status(401).json({ error: 'Usuario no encontrado' });
-    }
-
-    const user = result.rows[0];
-
-    // 2️⃣ Validar contraseña
-    const passwordIsValid = await bcrypt.compare(password, user.password);
-    console.log("🔑 Contraseña válida:", passwordIsValid);
-
-    if (!passwordIsValid) {
-      console.log("❌ Contraseña incorrecta");
-      return res.status(401).json({ error: 'Contraseña incorrecta' });
-    }
-
-    // 3️⃣ Generar token
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '2h' }
-    );
-
-    console.log("✅ Login exitoso, token generado");
-    res.json({ token, role: user.role });
-
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
   } catch (err) {
-    console.error("💥 Error completo en /login:", err);
-    res.status(500).json({ error: 'Error interno del servidor al intentar iniciar sesión.', detalle: err.message });
+    return res.status(403).json({ error: 'Token inválido' });
   }
-});
+}
 
-module.exports = router;
+// Middleware de roles
+function requireRole(...allowedRoles) {
+  return (req, res, next) => {
+    const token = parseTokenFromHeader(req);
+    if (!token) return res.status(401).json({ error: 'Token requerido' });
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+      if (!allowedRoles.includes(decoded.role)) {
+        return res.status(403).json({ error: 'Permiso denegado' });
+      }
+      next();
+    } catch (err) {
+      return res.status(403).json({ error: 'Token inválido' });
+    }
+  };
+}
+
+module.exports = { authRequired, requireRole };
