@@ -1,9 +1,7 @@
-// middleware/auth.js
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'CLAVE_SECRETA';
 
-// Lista de IPs permitidas para acceso público
-const PUBLIC_IPS = ['TU.IP.PUBLICA.AQUI']; // ej: ['192.168.1.50', '200.100.50.25']
+const PUBLIC_IPS = ['127.0.0.1', '::1']; // prueba localhost, agrega IPs reales luego
 
 function parseTokenFromHeader(req) {
   const auth = req.headers['authorization'] || '';
@@ -12,29 +10,29 @@ function parseTokenFromHeader(req) {
 
 function authRequired(req, res, next) {
   const token = parseTokenFromHeader(req);
+  const clientIp = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress;
+  console.log('Cliente IP:', clientIp);
+
   if (token) {
-    // Si hay token, se valida normalmente
     try {
       req.user = jwt.verify(token, JWT_SECRET);
       return next();
     } catch (err) {
       return res.status(403).json({ error: 'Token inválido' });
     }
+  } else if (PUBLIC_IPS.includes(clientIp)) {
+    req.user = { role: 'public' };
+    return next();
   } else {
-    // Si no hay token, permitimos solo si la IP está en PUBLIC_IPS
-    const clientIp = req.ip || req.connection.remoteAddress;
-    if (PUBLIC_IPS.includes(clientIp)) {
-      req.user = { role: 'public' }; // rol genérico público
-      return next();
-    } else {
-      return res.status(401).json({ error: 'Token requerido' });
-    }
+    return res.status(401).json({ error: 'Token requerido' });
   }
 }
 
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
     const token = parseTokenFromHeader(req);
+    const clientIp = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress;
+
     if (token) {
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
@@ -46,17 +44,14 @@ function requireRole(...allowedRoles) {
       } catch (err) {
         return res.status(403).json({ error: 'Token inválido' });
       }
-    } else {
-      const clientIp = req.ip || req.connection.remoteAddress;
-      if (PUBLIC_IPS.includes(clientIp)) {
-        req.user = { role: 'public' };
-        if (!allowedRoles.includes('public')) {
-          return res.status(403).json({ error: 'Permiso denegado' });
-        }
-        return next();
-      } else {
-        return res.status(401).json({ error: 'Token requerido' });
+    } else if (PUBLIC_IPS.includes(clientIp)) {
+      req.user = { role: 'public' };
+      if (!allowedRoles.includes('public')) {
+        return res.status(403).json({ error: 'Permiso denegado' });
       }
+      return next();
+    } else {
+      return res.status(401).json({ error: 'Token requerido' });
     }
   };
 }
